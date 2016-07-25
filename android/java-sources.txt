@@ -1,0 +1,2 @@
+"/Users/gconstantino/workspaces/TitaniumStudio/audiorecorder/android/build/generated/java/com/gconstantino/audiorecorder/AudiorecorderBootstrap.java"
+"/Users/gconstantino/workspaces/TitaniumStudio/audiorecorder/android/src/com/gconstantino/audiorecorder/AudiorecorderModule.java"
