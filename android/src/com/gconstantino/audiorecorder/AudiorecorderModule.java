@@ -17,104 +17,138 @@ import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.kroll.common.Log;
 import org.appcelerator.kroll.common.TiConfig;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.pm.PackageManager;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 
 @Kroll.module(name = "Audiorecorder", id = "com.gconstantino.audiorecorder")
 public class AudiorecorderModule extends KrollModule {
 
-    // Standard Debugging variables
-    private static final String LCAT = "AudiorecorderModule";
-    private static final boolean DBG = TiConfig.LOGD;
-    private MediaRecorder mRecorder = null;
-    private String audioStoragePath;
-    private boolean recording = false;
-    String file = "audio.3gp";
+	// Standard Debugging variables
+	private static final String LCAT = "AudiorecorderModule";
+	private static final boolean DBG = TiConfig.LOGD;
+	private MediaRecorder mRecorder = null;
+	private String audioStoragePath;
+	private boolean recording = false;
+	String file = "audio.3gp";
 
-    // You can define constants with @Kroll.constant, for example:
-    // @Kroll.constant public static final String EXTERNAL_NAME = value;
+	// You can define constants with @Kroll.constant, for example:
+	// @Kroll.constant public static final String EXTERNAL_NAME = value;
 
-    public AudiorecorderModule() {
-	super();
-    }
+	public AudiorecorderModule() {
+		super();
+	}
 
-    @Kroll.onAppCreate
-    public static void onAppCreate(TiApplication app) {
-	Log.d(LCAT, "inside onAppCreate");
-	// put module init code that needs to run when the application is created
-    }
+	@Kroll.method
+	public  boolean isStoragePermissionGranted() {
+		
+	    if (Build.VERSION.SDK_INT >= 23) {
+	    	Activity thisActivity = TiApplication.getInstance().getCurrentActivity();
+	        if (ContextCompat.checkSelfPermission(thisActivity, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+	                == PackageManager.PERMISSION_GRANTED) {
+	            Log.v(LCAT,"Permission is granted");
+	            return true;
+	        } else {
 
-    private void recordAudio() {
-	if (!recording) {
-	    recording = true;
-	    mRecorder = new MediaRecorder();
-	    mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-	    mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-
-	    File directory = new File (Environment.getExternalStorageDirectory().getAbsolutePath(), "/Audios");
-	    File file = new File(directory.getAbsolutePath(), this.file);
-	    audioStoragePath = file.getAbsolutePath();
-	    Log.d(LCAT, "File: " + file + " Path: " + audioStoragePath);
-	    boolean success = true;
-	    if (!directory.exists()) {
-		directory.mkdirs();
+	            Log.v(LCAT,"Permission is revoked");
+	            ActivityCompat.requestPermissions(thisActivity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+	            return false;
+	        }
 	    }
-	    if (success) {
-		Log.d(LCAT, directory + " created.");
-	    } else {
-		Log.d(LCAT, directory + " NOT created.");
-	    }
-	    mRecorder.setOutputFile(audioStoragePath);
-
-	    mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-	    try {
-		mRecorder.prepare();
-	    } catch (IOException e) {
-		Log.e(LCAT, "prepare() failed");
-		Log.e(LCAT, e.toString());
+	    else { //permission is automatically granted on sdk<23 upon installation
+	        Log.v(LCAT,"Permission is granted");
+	        return true;
 	    }
 
-	    mRecorder.start();
-	}
-    }
 
-    private void stopRecordingAudio() {
-	if (recording) {
-	    recording = false;
-	    mRecorder.stop();
-	    mRecorder.release();
-	    mRecorder = null;
 	}
-    }
 
-    // Methods
-    @Kroll.method
-    public void start() {
-	Log.d(LCAT, "start Rec called");
-	try {
-	    recordAudio();
-	} catch (Exception e) {
-	    Log.debug(LCAT, e.toString());
+	@Kroll.onAppCreate
+	public static void onAppCreate(TiApplication app) {
+		Log.d(LCAT, "inside onAppCreate");
+		// put module init code that needs to run when the application is
+		// created
 	}
-    }
 
-    @Kroll.method
-    public String stop() {
-	Log.d(LCAT, "stop Rec called");
-	try {
-	    stopRecordingAudio();
-	} catch (Exception e) {
-	    Log.debug(LCAT, e.toString());
+	private void recordAudio() {
+		if (!recording) {
+			isStoragePermissionGranted();
+			
+			recording = true;
+			mRecorder = new MediaRecorder();
+			mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+			mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+
+			File directory = new File(Environment.getExternalStorageDirectory()
+					.getAbsolutePath(), "/Audios");
+			boolean success = true;
+			if (!directory.exists()) {
+				success = directory.mkdirs();
+			}
+			if (success) {
+				Log.d(LCAT, directory + " created.");
+			} else {
+				Log.d(LCAT, directory + " NOT created.");
+			}
+			File file = new File(directory.getAbsolutePath(), this.file);
+			audioStoragePath = file.getAbsolutePath();
+			Log.d(LCAT, "File: " + file + " Path: " + audioStoragePath);
+			mRecorder.setOutputFile(audioStoragePath);
+
+			mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+			try {
+				mRecorder.prepare();
+			} catch (IOException e) {
+				Log.e(LCAT, "prepare() failed");
+				Log.e(LCAT, e.toString());
+			}
+
+			mRecorder.start();
+		}
 	}
-	return audioStoragePath;
-    }
 
-    @Kroll.method
-    public boolean getRecording() {
-	Log.d(LCAT, "get Recording called");
-	return this.recording;
-    }
+	private void stopRecordingAudio() {
+		if (recording) {
+			recording = false;
+			mRecorder.stop();
+			mRecorder.release();
+			mRecorder = null;
+		}
+	}
+
+	// Methods
+	@Kroll.method
+	public void start() {
+		Log.d(LCAT, "start Rec called");
+		try {
+			recordAudio();
+		} catch (Exception e) {
+			Log.debug(LCAT, e.toString());
+		}
+	}
+
+	@Kroll.method
+	public String stop() {
+		Log.d(LCAT, "stop Rec called");
+		try {
+			stopRecordingAudio();
+		} catch (Exception e) {
+			Log.debug(LCAT, e.toString());
+		}
+		return audioStoragePath;
+	}
+
+	@Kroll.method
+	public boolean getRecording() {
+		Log.d(LCAT, "get Recording called");
+		return this.recording;
+	}
 
 }
